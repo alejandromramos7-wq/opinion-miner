@@ -2,11 +2,22 @@ import pandas as pd
 
 import spacy
 
+from transformers import pipeline
+
+
+#carga el modelo spacy para la limpieza
 try:
     nlp = spacy.load("es_core_news_sm")
 except OSError:
     print("Error ---> no se encontro el modelo spacy.")
 
+    #cargar le modelo de inteligencia (BETO)
+
+print("cargando modelo de inteligencia (Beto)")
+clasificador_ia = pipeline(
+    "sentiment-analysis",
+    model="pysentimiento/robertuito-sentiment-analysis")
+print("Modelo IA cargado correctamente")
 #agrupacion cluesterin 
 #clasificacion preciccion anova
 
@@ -46,6 +57,22 @@ def limpiar_texto(texto):
     #agrega un epacio junto a cada palabra
     return " ".join(palabras_limpias)
 
+def analizar_sentimiento_ia(texto):
+    
+    #analizar con el modelo dep learning
+    resultado = clasificador_ia(str(texto)[:512])[0]
+
+    etiqueta = resultado['label']
+
+    traduccion = {
+        'POS': 'Positivo',
+        'NEG': 'Negativo',
+        'NEU': 'Neutro'
+    }
+
+    return traduccion.get(etiqueta, 'Neutro')
+
+
 
 
 if __name__ == "__main__":
@@ -58,12 +85,20 @@ if __name__ == "__main__":
         datos['comentario_limpio'] = datos['comentario'].apply(limpiar_texto)
         print("Limpieza completa")
 
+        print("\n Analizando sentimiento con IA....")
+        datos['sentimiento'] = datos['comentario'].apply(analizar_sentimiento_ia)
+        print('---- Analisis de sentimiento completado ----')
+
+        
         #solo es una comparativa para ver si se analizaron y limpiaron correctamente
-        print("\n comparativa de textos Original vs Limpio")
-        for i, fila in datos.head(3).iterrows():
-            print(f"[Original]: {fila['comentario']}")
-            print(f"[Limpio]: {fila['comentario_limpio']}")
+        print("---Resultados---")
+        print("========================")
+        for i, fila in datos.iterrows():
+            print(f"opinion {fila['id']}: [{fila['sentimiento']}]")
+            print(f"'{fila['comentario']}'")
+            print("-" * 50)
     
     except FileNotFoundError:
         print(f"Error: No encontre el archivo '{ARCHIVO}'.")
         print("asegurate que este en la misma carpeta que este script y que el nombre este bien escrito")
+
